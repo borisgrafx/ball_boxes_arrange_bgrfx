@@ -1,6 +1,6 @@
-import org.knowm.xchart.BitmapEncoder
-import org.knowm.xchart.QuickChart
-import org.knowm.xchart.SwingWrapper
+import org.knowm.xchart.BitmapEncoder.BitmapFormat
+import org.knowm.xchart.BitmapEncoder.saveBitmapWithDPI
+import org.knowm.xchart.QuickChart.getChart
 
 fun task1(iterations: Int) {
     val exp = parseData()
@@ -10,7 +10,6 @@ fun task1(iterations: Int) {
     val box4 = Box(11, 82, 78, 39, 83, 7)
     val box5 = Box(77, 67, 16, 48, 18,54)
     val boxes = listOf(box1, box2, box3, box4, box5)
-
     val firstBox = listOf(1.0, 1.0, 1.0, 1.0, 1.0)
     val secondBox = listOf(1.0, 1.0, 1.0, 1.0, 1.0)
     val thirdBox = listOf(1.0, 1.0, 1.0, 1.0, 1.0)
@@ -21,18 +20,14 @@ fun task1(iterations: Int) {
     for (i in 0..119) hypoProb.add(1.0 / 120)
     var sortedHypoProb = mutableMapOf<Int, Double>()
     val dataForGraph = mutableListOf<MutableList<Double>>()
-    for (i in 0..10) {
-        dataForGraph.add(mutableListOf())
-    }
+    for (i in 0..10) dataForGraph.add(mutableListOf())
     var k = 0
     for (i in 0 until iterations) {
-        distributionBox[i % 5] = calcProb(boxes, exp[i])
+        distributionBox[i % 5] = calculateProb(boxes, exp[i], arrayListOf(), true)
         if (i % 5 == 4) {
             hypoProb = calcProbeForHypo(distributionBox, hypoProb)
             fillProbForGraph(hypoProb, dataForGraph)
-            for (j in hypoProb.indices) {
-                sortedHypoProb[j] = hypoProb[j]
-            }
+            for (j in hypoProb.indices) sortedHypoProb[j] = hypoProb[j]
             k++
         }
     }
@@ -40,8 +35,7 @@ fun task1(iterations: Int) {
     println("$k итераций прохождения пяти корзин")
     println("Перестановки и их номера:")
     var count = 0
-    permutations().forEach { list ->
-        print("$count [")
+    permutations().forEach { list -> print("$count [ ")
         list.forEach { print("${it + 1} ") }
         println("]")
         count++
@@ -50,59 +44,8 @@ fun task1(iterations: Int) {
     sortedHypoProb = sortedHypoProb.toList().sortedBy { (_, v) -> v }.toMap().toMutableMap()
     println("Номер гипотезы => её вероятность :")
     sortedHypoProb.forEach { (k, v) -> println("$k => $v") }
-    println("Максимальная вероятность ${hypoProb.max()}")
-    graph(dataForGraph, k)
-}
-
-//+-
-fun calcProb(
-    boxes: List<Box>,
-    data: List<String>,
-): ArrayList<Double> {
-//probOfBoxN = probOfColor1 * probOfColor2 * probOfColors
-    val terms = arrayListOf(1.0, 1.0, 1.0, 1.0, 1.0)
-    for (term in 0..4) {
-        var probOfBoxN = 1.0
-        for (color in data)
-            when (color) {
-                "Red" -> {
-                    probOfBoxN *= boxes[term].red / boxes[term].total()
-                    boxes[term].red--
-                }
-                "White" -> {
-                    probOfBoxN *= boxes[term].white / boxes[term].total()
-                    boxes[term].white--
-                }
-                "Black" -> {
-                    probOfBoxN *= boxes[term].black / boxes[term].total()
-                    boxes[term].black--
-                }
-
-                "Green" -> {
-                    probOfBoxN *= boxes[term].green / boxes[term].total()
-                    boxes[term].green--
-                }
-                "Blue" -> {
-                    probOfBoxN *= boxes[term].blue / boxes[term].total()
-                    boxes[term].blue--
-                }
-                "Yellow" -> {
-                    probOfBoxN *= boxes[term].yellow / boxes[term].total()
-                    boxes[term].yellow--
-                }
-            }
-        terms[term] *= probOfBoxN
-        for (color in data)
-            when (color) {
-                "Red" -> boxes[term].red++
-                "White" -> boxes[term].white++
-                "Black" -> boxes[term].black++
-                "Green" -> boxes[term].green++
-                "Blue" -> boxes[term].blue++
-                "Yellow" -> boxes[term].yellow++
-            }
-    }
-    return terms
+    println("Максимальная вероятность ${hypoProb.maxOrNull()}")
+    graph1(dataForGraph, k)
 }
 
 fun calcProbeForHypo(data: List<List<Double>>, priorProb: List<Double>): ArrayList<Double> {
@@ -119,9 +62,7 @@ fun calcProbeForHypo(data: List<List<Double>>, priorProb: List<Double>): ArrayLi
         terms[term] *= probOfHypoN
     }
     val postProb = arrayListOf<Double>()
-    for (i in 0..119) {
-        postProb.add((terms[i]) / terms.sum())
-    }
+    for (i in 0..119) postProb.add((terms[i]) / terms.sum())
     return postProb
 }
 
@@ -139,12 +80,10 @@ fun fillProbForGraph(probs: ArrayList<Double>, data: List<MutableList<Double>>) 
     data[10].add(probs.filter { it > 0.1 }.size.toDouble())
 }
 
-fun graph(data: List<MutableList<Double>>, k: Int) {
+fun graph1(data: List<MutableList<Double>>, k: Int) {
     val xData = doubleArrayOf().toMutableList()
-    for (i in 1..k) {
-        xData.add(i * 5.0)
-    }
-    val chart = QuickChart.getChart("Вероятности гипотез", "N", "P", "[3 1 4 5 2]", xData, data[0])
+    for (i in 1..k) xData.add(i * 5.0)
+    val chart = getChart("Вероятности гипотез", "N", "P", "[3 1 4 5 2]", xData, data[0])
     chart.addSeries("[3 2 4 5 1]", xData, data[1])
     chart.addSeries("[1 3 4 5 2]", xData, data[2])
     chart.addSeries("[1 2 4 5 3]", xData, data[3])
@@ -154,15 +93,11 @@ fun graph(data: List<MutableList<Double>>, k: Int) {
     chart.addSeries("[1 3 4 2 5]", xData, data[7])
     chart.addSeries("[3 2 4 1 5]", xData, data[8])
     chart.addSeries("[3 5 4 2 1]", xData, data[9])
-    SwingWrapper(chart).displayChart()
-    BitmapEncoder.saveBitmapWithDPI(chart, "./results/punkt_1a", BitmapEncoder.BitmapFormat.JPG, 400)
-
+    saveBitmapWithDPI(chart, "./results/1a", BitmapFormat.JPG, 400)
     val chart1 =
-        QuickChart.getChart("Вероятность наилучшей гипотезы", "N", "P", "[3 1 4 5 2]", xData, data[0])
-//SwingWrapper(chart1) .dispLayChart()
-    BitmapEncoder.saveBitmapWithDPI(chart1, "./results/punkt_1", BitmapEncoder.BitmapFormat.JPG, 400)
+        getChart("Вероятность наилучшей гипотезы", "N", "P", "[3 1 4 5 2]", xData, data[0])
+    saveBitmapWithDPI(chart1, "./results/1", BitmapFormat.JPG, 400)
     val chart2 =
-        QuickChart.getChart("Количество превалирующих гипотез", "N", "P", "Количество гипотез", xData, data[10])
-    BitmapEncoder.saveBitmapWithDPI(chart2, "./results/punkt_1c", BitmapEncoder.BitmapFormat.JPG, 400)
-    SwingWrapper(chart2).displayChart()
+        getChart("Количество превалирующих гипотез", "N", "P", "Количество гипотез", xData, data[10])
+    saveBitmapWithDPI(chart2, "./results/1c", BitmapFormat.JPG, 400)
 }
